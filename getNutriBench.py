@@ -27,6 +27,8 @@ def extract_number(text):
 def ask(model, tokenizer, i, dataset):
     prompt, correctAnswer = makeQuestion(i, dataset)
     inputs = tokenizer(prompt, return_tensors="pt")
+    input_length = inputs.input_ids.shape[1]
+
     outputs = model.generate(
         **inputs,
         max_new_tokens=5,
@@ -34,18 +36,17 @@ def ask(model, tokenizer, i, dataset):
         temperature=0.7,
         do_sample=False
     )
-    text = tokenizer.decode(outputs[0], skip_special_tokens=True)
 
-    if "Nutrition answer:" in text:
-        generated_text = text.split("Nutrition answer:")[-1].strip()
-    else:
-        generated_text = text 
+    generated_tokens = outputs[0][input_length:]
+    generated_text = tokenizer.decode(generated_tokens, skip_special_tokens=True) 
 
-    return generated_text, correctAnswer
+    return generated_text, correctAnswer, prompt
 
 def evaluateModel():
     # NutriBench
     dataset = datasets.load_dataset('dongx1997/NutriBench', 'v2', split='train')
+    # Random 100
+    dataset = dataset.shuffle(seed=42).select(range(100))
 
     # GPT 2
     model_name = "gpt2"
@@ -55,13 +56,16 @@ def evaluateModel():
     rightwrong = [0,0]
     for i in range(len(dataset)):
         print(f"\nCase {i}")
-        givenAnswer, correctAnswer = ask(model, tokenizer, i, dataset)
+        givenAnswer, correctAnswer, prompt = ask(model, tokenizer, i, dataset)
 
         numericVal = extract_number(givenAnswer)
         # Handle cases where no number is found
         if numericVal is None:
             print(f"No number found")
             rightwrong[1] += 1
+            print(f"---- Prompt ---- :\n {prompt}")
+            print(f"---- Given Answer ----: {givenAnswer}")
+            print(f"---- Correct Answer --- :\n {correctAnswer}")
             continue
 
         error = correctAnswer - numericVal
@@ -69,8 +73,10 @@ def evaluateModel():
             rightwrong[1] += 1
         else:
             rightwrong[0] += 1
-        print(f"Given Answer: {givenAnswer}")
-        print(f"Correct Answer: {correctAnswer}")
+        
+        print(f"---- Prompt ---- :\n {prompt}")
+        print(f"---- Given Answer ----: {givenAnswer}")
+        print(f"---- Correct Answer --- :\n {correctAnswer}")
     print(f"Right/Wrong {rightwrong}")
 
 if __name__ == "__main__":
