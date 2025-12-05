@@ -2,11 +2,12 @@ import torch
 from transformers import AutoModelForCausalLM
 
 class Gpt2Trainer:
-    def __init__(self, model, train_loader, val_loader, learning_rate=5e-4, device="cpu"):
+    def __init__(self, model, train_loader, val_loader, learning_rate=5e-4, device="cpu", accumulation_steps=1):
         self.device = device
         self.model = model.to(self.device)
         self.train_loader = train_loader
         self.val_loader = val_loader
+        self.accumulation_steps = accumulation_steps
         
         # Optimizing
         self.optimizer = torch.optim.AdamW(self.model.parameters(), lr=learning_rate)
@@ -19,22 +20,22 @@ class Gpt2Trainer:
             # Move to GPU/MPS/CPU
             inputs, targets = inputs.to(self.device), targets.to(self.device)
             
-            # Reset Gradients
-            self.optimizer.zero_grad()
-            
-            # Forward Pass 
-            outputs = self.model(inputs, labels=targets)
-            loss = outputs.loss
-            
-            # Backward Pass
+            with torch.amp.autocast(device_type="cuda" if "cuda" in self.device else "cpu"):
+                outputs = self.model(inputs, labels=targets)
+                loss = outputs.loss / self.accumulation_steps
+    
             loss.backward()
-            self.optimizer.step()
+
+            if (step + 1) % self.accumulation_steps == 0:
+                self.optimizer.step()
+                self.optimizer.zero_grad()
             
-            total_loss += loss.item()
+            real_loss = loss.item() * self.accumulation_steps
+            total_loss += real_loss
 
             # Print progress every few steps
             if step % eval_freq == 0:
-                print(f"   Step {step}: Loss = {loss.item():.4f}")
+                print(f"   Step {step}: Loss = {real_loss:.4f}")
 
         avg_train_loss = total_loss / len(self.train_loader)
         return avg_train_loss
@@ -42,11 +43,14 @@ class Gpt2Trainer:
     def validate(self):
         self.model.eval() 
         total_val_loss = 0
+
+        device_type = "cuda" if "cuda" in str(self.device) else "cpu"
         
         with torch.no_grad():
             for inputs, targets in self.val_loader:
                 inputs, targets = inputs.to(self.device), targets.to(self.device)
-                outputs = self.model(inputs, labels=targets)
+                with torch.amp.autocast(device_type="cuda" if "cuda" in self.device else "cpu"):
+                    outputs = self.model(inputs, labels=targets)
                 total_val_loss += outputs.loss.item()
         
         avg_val_loss = total_val_loss / len(self.val_loader)

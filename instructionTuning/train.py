@@ -25,10 +25,10 @@ collate_fn = lambda b: InstructionTrainingLoader.custom_collate(b, device=DEVICE
     
 # loaders to feed the model dataset
 train_loader = torch.utils.data.DataLoader(
-    train_data, batch_size=4, shuffle=True, collate_fn=collate_fn
+    train_data, batch_size=2, shuffle=True, collate_fn=collate_fn
 )
 val_loader = torch.utils.data.DataLoader(
-    val_data, batch_size=4, shuffle=False, collate_fn=collate_fn
+    val_data, batch_size=2, shuffle=False, collate_fn=collate_fn
 )
 
 # Get the model
@@ -41,7 +41,8 @@ trainer = Gpt2Trainer(
     train_loader=train_loader, 
     val_loader=val_loader,
     learning_rate=5e-4,
-    device=DEVICE
+    device=DEVICE,
+    accumulation_steps=4
 )
 
 # run
