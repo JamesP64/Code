@@ -8,7 +8,7 @@ from gpt2InstructionTrainer import Gpt2Trainer
 
 # Device and tokenizer
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-tokenizer = tiktoken.get_encoding("gpt2-medium")
+tokenizer = tiktoken.get_encoding("gpt2")
 
 # Prep the instruction tuning data
 print("Loading Data...")
