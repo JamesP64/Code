@@ -59,7 +59,7 @@ class InstructionTrainingLoader(Dataset):
             )
 
     @staticmethod
-    def pad_batch(batch, pad_token_id=50256, ignore_index=-100, device="cpu"):
+    def custom_collate(batch, pad_token_id=50256, ignore_index=-100, device="cpu"):
 
         longest_input_len = max(len(item) for item in batch)
 
