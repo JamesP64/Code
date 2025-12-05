@@ -51,12 +51,17 @@ class InstructionTrainingLoader(Dataset):
 
     # Turn the data into strings of tokens
     def tokenize_dataset(self):
-        for entry in self.data:
-            self.encoded_texts.append(
-                self.tokenizer.encode(
-                    text = self.format_input(entry) + self.format_output(entry)
-                )
+       for entry in self.data:
+            encoded = self.tokenizer.encode(
+                self.format_input(entry) + self.format_output(entry), 
+                allowed_special={'<|endoftext|>'}
             )
+            
+            if len(encoded) <= 1024:
+                self.encoded_texts.append(encoded)
+            else:
+                pass
+
 
     @staticmethod
     def custom_collate(batch, pad_token_id=50256, ignore_index=-100, device="cpu"):
