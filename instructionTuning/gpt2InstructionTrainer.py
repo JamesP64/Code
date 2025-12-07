@@ -1,4 +1,6 @@
 import torch
+import json
+import os
 from transformers import AutoModelForCausalLM
 
 class Gpt2Trainer:
@@ -11,6 +13,13 @@ class Gpt2Trainer:
         
         # Optimizing
         self.optimizer = torch.optim.AdamW(self.model.parameters(), lr=learning_rate)
+
+        # Keep track of loss
+        self.history = {
+            "train_loss": [],
+            "val_loss": [],
+            "epochs": []
+        }
 
     def train_epoch(self, epoch_index, eval_freq=50):
         self.model.train()
@@ -66,6 +75,10 @@ class Gpt2Trainer:
             train_loss = self.train_epoch(epoch)
         
             val_loss = self.validate()
+
+            self.history["train_loss"].append(train_loss)
+            self.history["val_loss"].append(val_loss)
+            self.history["epochs"].append(epoch + 1)
             
             print(f"--> Epoch {epoch+1} Summary:")
             print(f"    Avg Train Loss: {train_loss:.4f}")
@@ -74,3 +87,8 @@ class Gpt2Trainer:
     def save_model(self, output_dir="my_gpt2_model"):
         print(f"Saving model to {output_dir}...")
         self.model.save_pretrained(output_dir)
+
+        history_path = os.path.join(output_dir, "training_history.json")
+        with open(history_path, "w") as f:
+            json.dump(self.history, f)
+        print(f"Training history saved to {history_path}")
