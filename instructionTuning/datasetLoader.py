@@ -50,8 +50,8 @@ class InstructionTrainingLoader(Dataset):
         return f"\n\n### Response:\n{entry['output']}"
 
     # Turn the data into strings of tokens
-    def tokenize_dataset(self):
-       for entry in self.data:
+    def tokenize_dataset(self,data):
+       for entry in data:
             encoded = self.tokenizer.encode(
                 self.format_input(entry) + self.format_output(entry), 
                 allowed_special={'<|endoftext|>'}
@@ -112,8 +112,8 @@ class InstructionTrainingLoader(Dataset):
         return inputs_tensor, targets_tensor
 
     def load(self):
-        self.data = self.download_and_load_file()
-        self.tokenize_dataset()  
+        data = self.download_and_load_file()
+        self.tokenize_dataset(data)  
 
     def __len__(self):
         return len(self.encoded_texts)
@@ -136,4 +136,11 @@ class InstructionTrainingLoader(Dataset):
             shuffle=shuffle, 
             collate_fn=custom_collate
         )
+
+if __name__ == "__main__":
+    tokenizer = tiktoken.get_encoding("gpt2")
+    loader = InstructionTrainingLoader(tokenizer)
+    data = loader.download_and_load_file()
+    loader.tokenize_dataset(data)
+    print(loader.custom_collate([loader.encoded_texts[52]]))
 
